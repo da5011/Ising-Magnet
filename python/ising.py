@@ -2,12 +2,22 @@ import numpy as np
 from numpy.random import rand
 import matplotlib.pyplot as plt
 from math import floor, exp
+from PIL import Image
+import os
 
 simulation_size = 128
 coupling_constant = 1
-temperature = 2
+temperature = 1
 inv_temperature = 1/temperature
 number_of_sweeps = 50
+
+saveFrames = True
+
+os.chdir(os.path.dirname(os.path.abspath(__file__))) #Sets CWD to script
+
+filePath = os.getcwd() + "\SimulationData\Temperature=" + str(temperature)
+if (os.path.exists(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames") == False):
+    os.makedirs(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames")
 
 def plusminusone():
     if rand() > 0.5:
@@ -16,12 +26,15 @@ def plusminusone():
         return -1
 
 def initialize(gridSize):
+    print("Initializing Simulation")
     isingModel = np.zeros((gridSize,gridSize))
 
     with np.nditer(isingModel, op_flags=['readwrite']) as isingIterator:
         for x in isingIterator:
             x[...] = plusminusone()
     
+    if saveFrames:
+        plotModel(isingModel, "Sweep0")
     return isingModel
 
 def calculateEnergy(isingModel):
@@ -48,14 +61,15 @@ def spinFlipEnergyChange(isingModel, x_coord, y_coord):
 def plotModel(model, fileName):
     plt.imshow(model, cmap= "jet")
     plt.title("2-D Ising Model")
-    plt.colorbar()
-    plt.savefig(fileName, dpi = 800)
+    plt.axis('off')
+    plt.savefig(filePath + "\\frames" + fileName, dpi = 800, bbox_inches = "tight")
     plt.close()
 
 def MonteCarloLoop(isingModel, number_of_sweeps):
     steps_per_sweep = len(isingModel)*len(isingModel[0])
 
     for sweep in range(0, number_of_sweeps):
+        print("Computing Sweep #" + str(sweep+1), end="\r")
         for step in range(0, steps_per_sweep):
             rand_x = floor(rand()*len(isingModel))
             rand_y = floor(rand()*len(isingModel[0]))
@@ -63,9 +77,11 @@ def MonteCarloLoop(isingModel, number_of_sweeps):
             if(exp(-inv_temperature*spinFlipEnergyChange(isingModel, rand_x, rand_y)) > rand()):
                 isingModel[rand_x, rand_y] = -isingModel[rand_x, rand_y]
 
+        if saveFrames:
+            plotModel(isingModel, f"Sweep{sweep+1}")
+        print("Simulation Complete")
     return isingModel
 
 my_model = initialize(simulation_size)
-plotModel(my_model, "MC Initial Configuration")
-MonteCarloLoop(my_model, number_of_sweeps)
-plotModel(my_model, "MC Sweep#" + str(number_of_sweeps))
+
+#MonteCarloLoop(my_model, number_of_sweeps)
