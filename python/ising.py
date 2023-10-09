@@ -6,20 +6,26 @@ from PIL import Image
 import os
 import pandas as pd
 
-simulation_size = 128
-temperature = 1
-inv_temperature = 1/temperature
-number_of_sweeps = 50
 
-saveFrames = True
+def startProgram():
+    global filePath, simulation_size, temperature, inv_temperature, number_of_sweeps, saveFrames
+    
+    print("**********************")
+    print("ISING MAGNET SIMULATOR")
+    print("**********************")
 
-os.chdir(os.path.dirname(os.path.abspath(__file__))) #Sets CWD to script
+    simulation_size = int(input("Please input the size of the simulation (integer): "))
+    temperature = float(input("Please input the temperature of the simulation [0-10] (float): "))
+    inv_temperature = 1/temperature
+    number_of_sweeps = int(input("Please input the number of sweeps for the simulation (integer): "))
+    saveFramesInput = str(input("Would you like to save simulation snapshots as images? This incurs a performance cost. (Y/N) ")).upper()
 
-filePath = os.getcwd() + "\SimulationData\Temperature=" + str(temperature)
-if (os.path.exists(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames") == False):
-    os.makedirs(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames")
+    saveFrames = True if saveFramesInput == "Y" else False
 
-EnergyPerSweep = np.zeros(number_of_sweeps+1)
+    os.chdir(os.path.dirname(os.path.abspath(__file__))) #Sets CWD to script
+    filePath = os.getcwd() + "\SimulationData\Temperature=" + str(temperature)
+    if (os.path.exists(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames") == False):
+        os.makedirs(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames")
 
 def plusminusone():
     if rand() > 0.5:
@@ -28,13 +34,16 @@ def plusminusone():
         return -1
 
 def initialize(gridSize):
-    print("Initializing Simulation")
-    isingModel = np.zeros((gridSize,gridSize))
+    global EnergyPerSweep
 
+    print("Initializing Simulation")
+
+    isingModel = np.zeros((gridSize,gridSize))
     with np.nditer(isingModel, op_flags=['readwrite']) as isingIterator:
         for x in isingIterator:
             x[...] = plusminusone()
-    
+
+    EnergyPerSweep = np.zeros(number_of_sweeps+1)
     EnergyPerSweep[0] = calculateEnergy(isingModel)
 
     if saveFrames:
@@ -66,10 +75,11 @@ def plotModel(model, fileName):
     plt.imshow(model, cmap= "jet")
     plt.title("2-D Ising Model")
     plt.axis('off')
-    plt.savefig(filePath + "\\frames" + fileName + ".png", dpi = 800, bbox_inches = "tight")
+    plt.savefig(filePath + "\\frames\\" + fileName + ".png", dpi = 800, bbox_inches = "tight")
     plt.close()
 
 def MonteCarloLoop(isingModel, number_of_sweeps):
+    print("SIMULATION START")
     steps_per_sweep = len(isingModel)*len(isingModel[0])
 
     for sweep in range(0, number_of_sweeps):
@@ -98,10 +108,11 @@ def DataAnalysis(energyArray):
         print("Generating gif...")
         frames = []
         for i in range(0, number_of_sweeps+1):
-            frames.append(Image.open(filePath + "\\frames" + f"Sweep{i}.png"))
+            frames.append(Image.open(filePath + "\\frames\\" + f"Sweep{i}.png"))
         animation = frames[0]
         animation.save(filePath + "\simulation.gif", format= "gif", append_images= frames, save_all= True, optimize= True, loop= 0)
 
+startProgram()
 my_model = initialize(simulation_size)
 MonteCarloLoop(my_model, number_of_sweeps)
 DataAnalysis(EnergyPerSweep)
