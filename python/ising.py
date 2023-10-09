@@ -1,11 +1,14 @@
+import os
+import pandas as pd
 import numpy as np
 from numpy.random import rand
 import matplotlib.pyplot as plt
 from math import floor, exp
 from PIL import Image
-import os
-import pandas as pd
 
+######################
+#FUNCTION DEFINITIONS#
+######################
 
 def startProgram():
     global filePath, simulation_size, temperature, inv_temperature, number_of_sweeps, saveFrames
@@ -23,9 +26,9 @@ def startProgram():
     saveFrames = True if saveFramesInput == "Y" else False
 
     os.chdir(os.path.dirname(os.path.abspath(__file__))) #Sets CWD to script
-    filePath = os.getcwd() + "\SimulationData\Temperature=" + str(temperature)
-    if (os.path.exists(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames") == False):
-        os.makedirs(os.getcwd() + "\SimulationData\Temperature=" + str(temperature) + "\\frames")
+    filePath = os.getcwd() + f"\SimulationData\{simulation_size}-{temperature}-{number_of_sweeps}"
+    if (os.path.exists(filePath + "\\frames") == False):
+        os.makedirs(filePath + "\\frames")
 
 def plusminusone():
     if rand() > 0.5:
@@ -73,7 +76,6 @@ def spinFlipEnergyChange(isingModel, x_coord, y_coord):
 
 def plotModel(model, fileName):
     plt.imshow(model, cmap= "jet")
-    plt.title("2-D Ising Model")
     plt.axis('off')
     plt.savefig(filePath + "\\frames\\" + fileName + ".png", dpi = 800, bbox_inches = "tight")
     plt.close()
@@ -111,6 +113,12 @@ def DataAnalysis(energyArray):
             frames.append(Image.open(filePath + "\\frames\\" + f"Sweep{i}.png"))
         animation = frames[0]
         animation.save(filePath + "\simulation.gif", format= "gif", append_images= frames, save_all= True, optimize= True, loop= 0)
+
+    print(f"Analysis Complete. Data has been saved to {filePath}")
+
+######################
+####PROGRAM START#####
+######################
 
 startProgram()
 my_model = initialize(simulation_size)
