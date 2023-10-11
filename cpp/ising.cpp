@@ -1,6 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include <random>
+#include <SDL2/SDL.h>
 
 using namespace std;
 typedef vector<vector<int>> lattice; //Defines 2D Vector as a lattice
@@ -11,27 +12,36 @@ uniform_real_distribution<float> dist(0.0, 1.0);
 int plusminusone();
 int superMod(int x, int y);
 void initializeSimulation(int latticeSize, lattice &latticeModel);
-void initializeRender();
+void drawFrame(lattice latticeModel, SDL_Renderer* renderer);
 int calculateEnergy(lattice latticeModel);
 int spinFlipEnergyChange(lattice latticeModel, int x_coord, int y_coord);
 
-int main(){
-    const int latticeSize = 10;
-    const int number_of_sweeps = 100;
+int main(int argc, char *argv[]){
+    const int latticeSize = 100;
+    const int number_of_sweeps = 1000;
     constexpr int steps_per_sweep = latticeSize*latticeSize;
-    float temperature = 2;
+    float temperature = 2.3;
     float inv_temperature = 1/temperature;
     lattice isingMagnet;
+    
+    const int windowMultiplier = 10;
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+    SDL_CreateWindowAndRenderer(latticeSize*windowMultiplier, latticeSize*windowMultiplier, 0, &window, &renderer);
+    SDL_RenderSetScale(renderer, windowMultiplier, windowMultiplier);
+    SDL_SetWindowTitle(window, "Ising Magnet Monte Carlo");
 
     initializeSimulation(latticeSize, isingMagnet);
+
     for (int n=0; n < number_of_sweeps; n++){
+        drawFrame(isingMagnet, renderer);
         for (int m=0; m < steps_per_sweep; m++){
             int rand_x = floor(latticeSize*dist(rd));
             int rand_y = floor(latticeSize*dist(rd));
 
             int spinFlipCandidate = spinFlipEnergyChange(isingMagnet, rand_x, rand_y);
 
-            if(exp(-inv_temperature*spinFlipCandidate > dist(rd))){
+            if(exp(-inv_temperature*spinFlipCandidate) > dist(rd)){
                 isingMagnet[rand_x][rand_y] = -isingMagnet[rand_x][rand_y];
             }
         }
@@ -60,7 +70,21 @@ void initializeSimulation(int latticeSize, lattice &latticeModel){
     int intial_energy = calculateEnergy(latticeModel);
 }
 
-//void initializeRender(){}
+void drawFrame(lattice latticeModel, SDL_Renderer* renderer){
+    SDL_SetRenderDrawColor(renderer, 10, 45, 70, 255);
+    SDL_RenderClear(renderer);
+
+    for(int i = 0; i < latticeModel.size(); i++){
+        for(int j = 0; j < latticeModel.size(); j++){
+            if (latticeModel[i][j] == -1){
+                SDL_SetRenderDrawColor(renderer, 151, 209, 187, 255);
+                SDL_RenderDrawPoint(renderer, i, j);
+            };
+        };
+    };
+
+    SDL_RenderPresent(renderer);
+}
 
 int calculateEnergy(lattice latticeModel){
     int size = latticeModel.size();
