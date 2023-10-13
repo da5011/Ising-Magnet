@@ -100,7 +100,7 @@ def compute_heatCapacity(bigAssArray):
 
 # def compute_E2_AVG(energyArray):
 #     E2_AVG_Array = np.zeros(len(energyArray))
-#     E2_Array = np.zeros(len(energyArray))
+#     E2_Array = np.zeros(len(energyArray)) test
 
 #     for i in range(0, len(E2_AVG_Array)):   
 #         E2_Array[i] = energyArray[i]*energyArray[i]
