@@ -78,8 +78,7 @@ def calculateEnergy(): #heat capacity is the variance in the energy w T
     return int(-0.5*energy)
 
 def spinFlipEnergyChange(x_coord, y_coord):
-    nrows = len(isingModel)
-    ncols = len(isingModel[0])
+
     currentSpin = isingModel[x_coord,y_coord]
     deltaE = (2*currentSpin)*(isingModel[x_coord,(y_coord+1)%ncols] + isingModel[x_coord,(y_coord-1)%ncols] + \
                               isingModel[(x_coord+1)%nrows,y_coord] + isingModel[(x_coord-1)%nrows,y_coord]) #Energy calculation w/ PBC
@@ -104,21 +103,22 @@ def MonteCarloLoop(number_of_sweeps):
     print("SIMULATION START")
     magnetization = np.sum(isingModel)
 
+    x,y = np.indices((simulation_size,simulation_size))
+    red = np.logical_and((x+y) % 2==0   , np.logical_and(x<simulation_size-1, y<simulation_size-1))
+    red[simulation_size-1,simulation_size-1] = True
+
+    blue = np.logical_and((x+y) % 2==1  , np.logical_and(x<simulation_size-1, y<simulation_size-1))
+
+    green = np.logical_and((x+y) % 2==0 , np.logical_or(x==simulation_size-1, y==simulation_size-1))
+    green[simulation_size-1,simulation_size-1] = False
+
+    yellow = np.logical_and((x+y) % 2==1, np.logical_or(x==simulation_size-1, y==simulation_size-1))
+
+    dE_RED = np.array(len(red))
+    dE_RED[i] = (-2*red[i])
     for sweep in range(0, number_of_sweeps):
         print("Computing Sweep #" + str(sweep+1), end="\r")
         energy_array[sweep+1] += energy_array[sweep]
-
-        for step in range(0, steps_per_sweep):
-            rand_x = floor(rand()*len(isingModel))
-            rand_y = floor(rand()*len(isingModel[0]))
-            spinFlipCandidate = spinFlipEnergyChange(rand_x, rand_y)
-            
-            if(exp(-inv_temperature*spinFlipCandidate) > rand()):
-                isingModel[rand_x, rand_y] = -isingModel[rand_x, rand_y]
-                energy_array[sweep+1] += spinFlipCandidate
-                magnetization += isingModel[rand_x, rand_y]
-
-        magnitizationSquared_array[sweep+1] = magnetization**2
 
         if saveFrames:
             plotModel(isingModel, f"Sweep{sweep+1}")
