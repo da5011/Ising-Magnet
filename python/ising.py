@@ -103,11 +103,11 @@ def EnergyAnalysis():
 
 def MonteCarloLoop(number_of_sweeps):
     print("SIMULATION START")
-    #magnetization = np.sum(isingModel)
+    magnetization = np.sum(isingModel)
 
     for sweep in range(0, number_of_sweeps):
         print("Computing Sweep #" + str(sweep+1), end="\r")
-        #energy_array[sweep+1] += energy_array[sweep]
+        energy_array[sweep+1] += energy_array[sweep]
 
         for step in range(0, steps_per_sweep):
             rand_x = floor(rand()*len(isingModel))
@@ -116,13 +116,13 @@ def MonteCarloLoop(number_of_sweeps):
             
             if(exp(-inv_temperature*spinFlipCandidate) > rand()):
                 isingModel[rand_x, rand_y] = -isingModel[rand_x, rand_y]
-                #energy_array[sweep+1] += spinFlipCandidate
-                #magnetization += isingModel[rand_x, rand_y]
+                energy_array[sweep+1] += spinFlipCandidate
+                magnetization += isingModel[rand_x, rand_y]
 
-        #magnitizationSquared_array[sweep+1] = magnetization**2
+        magnitizationSquared_array[sweep+1] = magnetization**2
 
-        # if saveFrames:
-        #     plotModel(isingModel, f"Sweep{sweep+1}")
+        if saveFrames:
+            plotModel(isingModel, f"Sweep{sweep+1}")
 
     print("\nSimulation Complete")
 
@@ -151,5 +151,6 @@ tic = time.time()
 initialize(simulation_size)
 MonteCarloLoop(number_of_sweeps)
 toc = time.time()
+DataAnalysis()
 
 print("Simulation Completed in: " + str(toc-tic) + " seconds.")
