@@ -3,8 +3,9 @@ import pandas as pd
 import numpy as np
 from numpy.random import rand
 import matplotlib.pyplot as plt
-from math import floor, exp
+from math import exp
 from PIL import Image
+import time
 
 ######################
 #FUNCTION DEFINITIONS#
@@ -17,10 +18,10 @@ def startProgram():
     print("ISING MAGNET SIMULATOR")
     print("**********************")
 
-    simulation_size = 5 #int(input("Please input the size of the simulation (integer): "))
+    simulation_size = 81 #int(input("Please input the size of the simulation (integer): "))
     temperature = 2 #float(input("Please input the temperature of the simulation [0-10] (float): "))
     inv_temperature = 1/temperature
-    number_of_sweeps = 1 #int(input("Please input the number of sweeps for the simulation (integer): "))
+    number_of_sweeps = 1000 #int(input("Please input the number of sweeps for the simulation (integer): "))
     steps_per_sweep = simulation_size*simulation_size
     saveFramesInput = "N" #str(input("Would you like to save simulation snapshots as images? This incurs a performance cost. (Y/N) ")).upper()
 
@@ -36,7 +37,7 @@ def startProgram():
 def initialize(gridSize):
     global energy_array, energyAverage_array, magnitizationSquared_array, \
     energySquared_array, energySquared_average_array, energyAverage_squared_array, \
-    heatCapacity_array
+    heatCapacity_array, isingModel
 
     print("Initializing Simulation")
 
@@ -62,28 +63,24 @@ def initialize(gridSize):
     if saveFrames:
         plotModel(isingModel, "Sweep0")
 
-    return isingModel
-
 def arrayRunningAverage(array, index):
     return np.average(array[:index+1])
 
-def calculateEnergy(isingModel): #heat capacity is the variance in the energy w T
+def calculateEnergy(isingModel):
     energy = 0
-    nrows = len(isingModel)
-    ncols = len(isingModel[0])
 
-    for i in range(nrows):
-        for j in range(ncols):
+    for i in range(simulation_size): #Energy calculation w/ PBC
+        for j in range(simulation_size):
             currentSpin = isingModel[i,j]
-            energy += currentSpin*(isingModel[i,(j+1)%ncols] + isingModel[i,(j-1)%ncols] + \
-                                   isingModel[(i+1)%nrows,j] + isingModel[(i-1)%nrows,j]) #Energy calculation w/ PBC
+            energy += currentSpin*(isingModel[i,(j+1)%simulation_size] + isingModel[i,(j-1)%simulation_size] + \
+                                   isingModel[(i+1)%simulation_size,j] + isingModel[(i-1)%simulation_size,j]) 
     return int(-0.5*energy)
 
 def spinFlipEnergyChange(x_coord, y_coord, isingModel):
 
     currentSpin = isingModel[x_coord,y_coord]
-    deltaE = (2*currentSpin)*(isingModel[x_coord,(y_coord+1)%ncols] + isingModel[x_coord,(y_coord-1)%ncols] + \
-                              isingModel[(x_coord+1)%nrows,y_coord] + isingModel[(x_coord-1)%nrows,y_coord]) #Energy calculation w/ PBC
+    deltaE = (2*currentSpin)*(isingModel[x_coord, (y_coord+1)%simulation_size] + isingModel[x_coord, (y_coord-1)%simulation_size] + \
+                              isingModel[(x_coord+1)%simulation_size, y_coord] + isingModel[(x_coord-1)%simulation_size, y_coord])
     
     return deltaE
 
@@ -101,30 +98,40 @@ def EnergyAnalysis():
         energyAverage_squared_array[i] = (energyAverage_array[i])**2
         heatCapacity_array[i] = (inv_temperature**2)*(per_particle)*(energySquared_average_array[i]-energyAverage_squared_array[i])
 
-def MonteCarloLoop(number_of_sweeps, isingModel):
+def colorSwap(color):
+    color_dE = (2*isingModel*((np.roll(isingModel,1, axis=0)) + (np.roll(isingModel,-1, axis=0)) +
+                                   (np.roll(isingModel,1, axis=1)) + (np.roll(isingModel,-1, axis=1))))[color]
+    
+    color_prob = [True if (exp(-inv_temperature*index) > rand()) else False for index in color_dE]
+
+    isingModel[color] = [-i if j == True else i for i,j in zip(isingModel[color], color_prob)]
+
+def MonteCarloLoop(number_of_sweeps):
     print("SIMULATION START")
-    magnetization = np.sum(isingModel)
 
-    x,y = np.indices((simulation_size,simulation_size))
-    red = np.logical_and((x+y) % 2==0   , np.logical_and(x<simulation_size-1, y<simulation_size-1))
-    red[simulation_size-1,simulation_size-1] = True
+    #Defining grid "colors"
+    x,y = np.indices((simulation_size, simulation_size))
+    red = np.logical_and(((x+y)%2) == 0, 
+                        np.logical_and(x < (simulation_size-1), y < (simulation_size-1)))
+    red[simulation_size-1, simulation_size-1] = True
 
-    blue = np.logical_and((x+y) % 2==1  , np.logical_and(x<simulation_size-1, y<simulation_size-1))
+    blue = np.logical_and(((x+y)%2) == 1,
+                        np.logical_and(x < (simulation_size-1), y < (simulation_size-1)))
 
-    green = np.logical_and((x+y) % 2==0 , np.logical_or(x==simulation_size-1, y==simulation_size-1))
-    green[simulation_size-1,simulation_size-1] = False
+    green = np.logical_and(((x+y)%2) == 0, 
+                        np.logical_or(x == (simulation_size-1), y == (simulation_size-1)))
+    green[(simulation_size-1),(simulation_size-1)] = False
 
-    yellow = np.logical_and((x+y) % 2==1, np.logical_or(x==simulation_size-1, y==simulation_size-1))
-
-    print(isingModel, end="\n")
-    plotModel(isingModel, "original")
-    print(isingModel[red], end="\n")
-    print(np.roll(isingModel,(1,0)), end="\n")
-    plotModel(np.roll(isingModel,(1,0), axis=0), "roll_1_0")
-    print(np.roll(isingModel,(1,0))[red], end="\n")
-
-    dE_RED = (-2*isingModel[red])*((np.roll(isingModel,(1,0), axis=0))[red] + (np.roll(isingModel,(-1,0), axis=0))[red] +
-                                   (np.roll(isingModel,(0,1), axis=0))[red] + (np.roll(isingModel,(0,-1), axis=0))[red])
+    yellow = np.logical_and(((x+y)%2) == 1,
+                        np.logical_or(x == (simulation_size-1), y == (simulation_size-1)))
+    
+    for sweep in range(0, number_of_sweeps):
+        print(f"Sweep{sweep}", end="\r")
+        colorSwap(red)
+        colorSwap(blue)
+        colorSwap(green)
+        colorSwap(yellow)
+        plotModel(isingModel, f"Sweep{sweep+1}")
 
 def DataAnalysis():
     EnergyAnalysis()
@@ -147,5 +154,10 @@ def DataAnalysis():
 ######################
 
 startProgram()
-ising = initialize(simulation_size)
-MonteCarloLoop(number_of_sweeps, ising)
+tic = time.time()
+initialize(simulation_size)
+MonteCarloLoop(number_of_sweeps)
+toc = time.time()
+
+
+print("Simulation Completed in: " + str(toc-tic) + " seconds.")
