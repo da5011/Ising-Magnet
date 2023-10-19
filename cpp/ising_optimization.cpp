@@ -21,24 +21,15 @@ int main(){
     float temperature = 2.3;
     float inv_temperature = 1/temperature;
     lattice isingMagnet;
-    
-    const int windowMultiplier = 10;
+    vector<int> redSpins;
 
     initializeSimulation(latticeSize, isingMagnet);
 
     for (int n=0; n < number_of_sweeps; n++){
         for (int m=0; m < steps_per_sweep; m++){
-            int rand_x = floor(latticeSize*dist(rd));
-            int rand_y = floor(latticeSize*dist(rd));
         }
     }
 
-    for (int i=0; i<latticeSize; i++){
-        for (int j=0; j<latticeSize; j++){
-            cout << isingMagnet[i][j] << " ";
-        }
-        cout << "\n";
-    }
     return 0;
 };
 
